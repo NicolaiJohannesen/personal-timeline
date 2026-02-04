@@ -1,0 +1,40 @@
+{
+  "name": "personal-timeline",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "NODE_OPTIONS='--max-old-space-size=4096' vitest",
+    "test:run": "NODE_OPTIONS='--max-old-space-size=4096' vitest run",
+    "test:coverage": "NODE_OPTIONS='--max-old-space-size=4096' vitest run --coverage"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jszip": "^3.4.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.1.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^27.0.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
+  }
+}
