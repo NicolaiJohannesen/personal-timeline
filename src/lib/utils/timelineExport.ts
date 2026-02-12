@@ -99,7 +99,7 @@ export function exportTimelineAsPDF(
   // This is a minimal PDF that embeds the image
   const pdf = createSimplePDF(imgData, canvas.width, canvas.height, title);
 
-  const blob = new Blob([pdf], { type: 'application/pdf' });
+  const blob = new Blob([pdf.buffer as BlobPart], { type: 'application/pdf' });
   downloadBlob(blob, filename);
 }
 

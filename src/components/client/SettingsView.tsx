@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { userProfile, timelineEvents, exportAllData, clearAllData } from '@/lib/db';
-import type { UserProfile, UserSettings } from '@/types';
+import type { UserProfile, UserSettings, AISettings } from '@/types';
 
 const COUNTRIES = [
   { value: '', label: 'Select country' },
@@ -18,6 +18,12 @@ const COUNTRIES = [
   { value: 'other', label: 'Other' },
 ];
 
+const DEFAULT_AI_SETTINGS: AISettings = {
+  provider: 'none',
+  apiKey: undefined,
+  model: 'claude-sonnet-4-20250514',
+};
+
 const DEFAULT_SETTINGS: UserSettings = {
   theme: 'dark',
   defaultView: 'timeline',
@@ -27,7 +33,15 @@ const DEFAULT_SETTINGS: UserSettings = {
     milestoneAlerts: true,
     coachingPrompts: false,
   },
+  ai: DEFAULT_AI_SETTINGS,
 };
+
+const AI_MODELS = [
+  { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (Recommended)' },
+  { value: 'claude-opus-4-20250514', label: 'Claude Opus 4 (Most capable)' },
+  { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+  { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Fastest)' },
+];
 
 export function SettingsView() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -35,6 +49,7 @@ export function SettingsView() {
   const [isSaving, setIsSaving] = useState(false);
   const [eventCount, setEventCount] = useState(0);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Form state
   const [name, setName] = useState('');
@@ -170,6 +185,16 @@ export function SettingsView() {
     setSettings((prev) => ({
       ...prev,
       notifications: { ...prev.notifications, [key]: value },
+    }));
+  };
+
+  const updateAISetting = <K extends keyof AISettings>(
+    key: K,
+    value: AISettings[K]
+  ) => {
+    setSettings((prev) => ({
+      ...prev,
+      ai: { ...(prev.ai || DEFAULT_AI_SETTINGS), [key]: value },
     }));
   };
 
@@ -417,6 +442,104 @@ export function SettingsView() {
               onChange={(e) => updateNotification('coachingPrompts', e.target.checked)}
             />
           </label>
+        </div>
+      </section>
+
+      {/* AI Coach Section */}
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">AI Coach</h2>
+        <div className="card space-y-4">
+          <div className="p-4 bg-[var(--color-bg-secondary)] rounded-lg">
+            <div className="flex items-start gap-3">
+              <svg
+                className="w-5 h-5 text-[var(--color-accent-primary)] mt-0.5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div className="text-sm text-[var(--color-text-secondary)]">
+                Connect your Anthropic API key to enable real AI-powered coaching.
+                Without an API key, the coach will use simulated responses.
+                Your API key is stored locally and never sent to our servers.
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              Anthropic API Key
+            </label>
+            <div className="relative">
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                className="input pr-24"
+                placeholder="sk-ant-..."
+                value={settings.ai?.apiKey || ''}
+                onChange={(e) => updateAISetting('apiKey', e.target.value || undefined)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost text-xs py-1 px-2"
+              >
+                {showApiKey ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              Get your API key at{' '}
+              <a
+                href="https://console.anthropic.com/settings/keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-accent-primary)] hover:underline"
+              >
+                console.anthropic.com
+              </a>
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              Model
+            </label>
+            <select
+              className="input"
+              value={settings.ai?.model || 'claude-sonnet-4-20250514'}
+              onChange={(e) => updateAISetting('model', e.target.value)}
+              disabled={!settings.ai?.apiKey}
+            >
+              {AI_MODELS.map((model) => (
+                <option key={model.value} value={model.value}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <div>
+              <div className="font-medium">Status</div>
+              <div className="text-sm text-[var(--color-text-muted)]">
+                {settings.ai?.apiKey
+                  ? 'API key configured - AI Coach is ready'
+                  : 'No API key - using simulated responses'}
+              </div>
+            </div>
+            <div
+              className={`w-3 h-3 rounded-full ${
+                settings.ai?.apiKey
+                  ? 'bg-green-500'
+                  : 'bg-[var(--color-text-muted)]'
+              }`}
+            />
+          </div>
         </div>
       </section>
 

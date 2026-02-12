@@ -82,7 +82,7 @@ export function HealthMetricsAssessment({ onComplete, onCancel }: HealthMetricsP
     };
   }, [entries]);
 
-  const handleInputChange = (field: keyof HealthEntry, value: string | number) => {
+  const handleInputChange = (field: keyof HealthEntry, value: string | number | undefined) => {
     setCurrentEntry((prev) => ({
       ...prev,
       [field]: value,

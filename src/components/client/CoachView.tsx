@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { timelineEvents, userProfile, goals, assessments } from '@/lib/db';
-import type { TimelineEvent, Goal, UserProfile, AssessmentResult } from '@/types';
+import type { TimelineEvent, Goal, UserProfile, AssessmentResult, AISettings } from '@/types';
 import { createAbortController } from '@/lib/utils/asyncCleanup';
+import { buildContextSummary, type CoachingFocus } from '@/lib/coach/contextBuilder';
+import { generateCoachResponse } from '@/lib/actions/coach';
 
 interface Message {
   id: string;
@@ -127,7 +129,9 @@ export function CoachView() {
     assessments: [],
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [coachingFocus, setCoachingFocus] = useState({
+  const [aiSettings, setAISettings] = useState<AISettings | undefined>();
+  const [error, setError] = useState<string | null>(null);
+  const [coachingFocus, setCoachingFocus] = useState<CoachingFocus>({
     goalProgress: true,
     lifePatterns: true,
     mentalWellness: false,
@@ -167,6 +171,11 @@ export function CoachView() {
           profile: profileData ?? null,
           assessments: assessmentsData,
         });
+
+        // Load AI settings from profile
+        if (profileData?.settings?.ai) {
+          setAISettings(profileData.settings.ai);
+        }
 
         // Add welcome message based on context
         const welcomeMessage = generateWelcomeMessage(
@@ -208,11 +217,61 @@ export function CoachView() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
+    setError(null);
 
-    // Simulate AI thinking time
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+    let responseContent: string;
 
-    const responseContent = generateMockResponse(input, context);
+    // Check if we have an API key configured
+    if (aiSettings?.apiKey && aiSettings.provider === 'anthropic') {
+      try {
+        // Build context summary for the LLM
+        const contextSummary = buildContextSummary(
+          {
+            events: context.events,
+            goals: context.goals,
+            profile: context.profile,
+            assessments: context.assessments,
+          },
+          coachingFocus
+        );
+
+        // Get conversation history (excluding welcome message)
+        const conversationHistory = messages
+          .filter(m => m.id !== 'welcome')
+          .slice(-10)
+          .map(m => ({
+            role: m.role,
+            content: m.content,
+          }));
+
+        // Call the Server Action
+        const result = await generateCoachResponse({
+          message: input.trim(),
+          apiKey: aiSettings.apiKey,
+          model: aiSettings.model || 'claude-sonnet-4-20250514',
+          context: contextSummary,
+          conversationHistory,
+        });
+
+        if (result.success && result.response) {
+          responseContent = result.response;
+        } else {
+          // API call failed, show error and fallback to mock
+          setError(result.error || 'Failed to get response from AI');
+          responseContent = generateMockResponse(input, context);
+        }
+      } catch (err) {
+        // Unexpected error, fallback to mock
+        console.error('Error calling coach API:', err);
+        setError('An unexpected error occurred. Using offline mode.');
+        responseContent = generateMockResponse(input, context);
+      }
+    } else {
+      // No API key configured, use mock responses
+      // Add small delay to simulate thinking
+      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
+      responseContent = generateMockResponse(input, context);
+    }
 
     const assistantMessage: Message = {
       id: `assistant-${Date.now()}`,
@@ -397,6 +456,26 @@ export function CoachView() {
             </div>
           )}
 
+          {/* Error Display */}
+          {error && (
+            <div className="mx-4 mb-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-2 text-red-400 text-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>{error}</span>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-400 hover:text-red-300 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Input Area */}
           <div className="border-t border-[var(--color-border-subtle)] p-4">
             <div className="flex gap-3">
@@ -421,7 +500,7 @@ export function CoachView() {
               </button>
             </div>
             <p className="text-xs text-[var(--color-text-muted)] mt-2">
-              Press Enter to send. The AI Coach uses your timeline data for personalized guidance.
+              Press Enter to send. {aiSettings?.apiKey ? 'Using Claude AI.' : 'Configure API key in Settings for AI-powered responses.'}
             </p>
           </div>
         </div>
@@ -517,6 +596,22 @@ export function CoachView() {
               </div>
             </div>
           )}
+
+          {/* AI Status */}
+          <div className={`text-xs p-3 rounded-lg flex items-center gap-2 ${
+            aiSettings?.apiKey
+              ? 'bg-green-500/10 text-green-400'
+              : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]'
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${
+              aiSettings?.apiKey ? 'bg-green-400' : 'bg-[var(--color-text-muted)]'
+            }`} />
+            <span>
+              {aiSettings?.apiKey
+                ? `Claude AI Connected (${aiSettings.model || 'claude-sonnet-4-20250514'})`
+                : 'Offline Mode - Configure API key in Settings'}
+            </span>
+          </div>
 
           {/* Disclaimer */}
           <div className="text-xs text-[var(--color-text-muted)] p-3 bg-[var(--color-bg-secondary)] rounded-lg">

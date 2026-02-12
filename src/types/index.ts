@@ -39,7 +39,7 @@ export type GoalPriority = 'high' | 'medium' | 'low';
 // Timeline Event
 export interface TimelineEvent {
   id: string;
-  userId: string;
+  userId?: string;
   title: string;
   description?: string;
   startDate: Date;
@@ -59,6 +59,7 @@ export interface GeoLocation {
   latitude: number;
   longitude: number;
   name?: string;
+  city?: string;
   country?: string;
 }
 
@@ -112,12 +113,22 @@ export interface UserSettings {
   defaultView: 'timeline' | 'insights' | 'dreamboard' | 'coach';
   sidebarCollapsed: boolean;
   notifications: NotificationSettings;
+  ai?: AISettings;
 }
 
 export interface NotificationSettings {
   goalReminders: boolean;
   milestoneAlerts: boolean;
   coachingPrompts: boolean;
+}
+
+// AI Coach Settings
+export type AIProvider = 'anthropic' | 'none';
+
+export interface AISettings {
+  provider: AIProvider;
+  apiKey?: string;
+  model: string;
 }
 
 // Assessment Results
@@ -131,10 +142,11 @@ export type AssessmentType =
 
 export interface AssessmentResult {
   id: string;
-  userId: string;
+  userId?: string;
   assessmentType: AssessmentType;
   completedAt: Date;
-  scores: Record<string, number | string>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  scores: Record<string, any>;
   duration: number; // seconds
 }
 
