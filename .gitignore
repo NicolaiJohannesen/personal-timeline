@@ -72,3 +72,9 @@ logs/
 
 # import folder (user data uploads)
 /import/
+
+# Claude Code
+.claude/
+
+# VS Code workspace files
+*.code-workspace
